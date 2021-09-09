@@ -1,0 +1,12 @@
+{
+  "ExpandedNodes": [
+    "",
+    "\\boot",
+    "\\fs",
+    "\\include",
+    "\\init",
+    "\\mm"
+  ],
+  "SelectedNode": "\\fs\\block_dev.c",
+  "PreviewInSolutionExplorer": false
+}
