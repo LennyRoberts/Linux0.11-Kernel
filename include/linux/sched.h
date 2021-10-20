@@ -79,33 +79,37 @@ struct tss_struct {
 
 struct task_struct {
 /* these are hardcoded - don't touch */
-	long state;	/* -1 unrunnable, 0 runnable, >0 stopped */
-	long counter;
-	long priority;
-	long signal;
-	struct sigaction sigaction[32];
-	long blocked;	/* bitmap of masked signals */
+	long state;		/* -1 unrunnable, 0 runnable, >0 stopped */
+	long counter;	/* 进程运行的时间计数(递减)(滴答数)，运行时间片 */
+	long priority;	/* 运行优先数，任务开始运行时counter=priority，数值越大运行时长越长 */
+	long signal;	/* 信号(位图),每个比特代表一种信号，信号值=位偏移值+1 */
+	struct sigaction sigaction[32];	/* 信号执行属性结构，对应信号简要执行的操作和标志信息 */
+	long blocked;	/* bitmap of masked signals */ /* 进程信号屏蔽码(对应信号位图) */
 /* various fields */
-	int exit_code;
-	unsigned long start_code,end_code,end_data,brk,start_stack;
-	long pid,father,pgrp,session,leader;
-	unsigned short uid,euid,suid;
-	unsigned short gid,egid,sgid;
-	long alarm;
-	long utime,stime,cutime,cstime,start_time;
-	unsigned short used_math;
+	int exit_code;	/* 任务停止执行后的退出码，其父进程会来取 */
+	unsigned long start_code,end_code,end_data,brk,start_stack;	/* 分别对应：代码段地址、代码长度(字节数)、代码长度+数据长度(字节数)，总长度(字节数)，堆栈段地址 */
+	long pid,father,pgrp,session,leader;	/* 分别对应：进程号、父进程号、进程组号、会话号、会话首领 */
+	unsigned short uid,euid,suid;			/* 分别对应：用户ID、有效ID、保存的用户ID */
+	unsigned short gid,egid,sgid;			/* 组ID、有效组ID、保存的组ID */
+	long alarm;								/* 报警定时值(滴答数) */
+	long utime;					/*用户态运行时长(滴答数)*/
+	long stime;					/*系统态运行时长(滴答数)*/
+	long cutime;				/*子进程用户态运行时长*/
+	long cstime;				/*子进程系统态运行时长*/
+	long start_time;			/*系统开始运行时刻*/
+	unsigned short used_math;	/*标志：是否使用了协处理器*/
 /* file system info */
-	int tty;		/* -1 if no tty, so it must be signed */
-	unsigned short umask;
-	struct m_inode * pwd;
-	struct m_inode * root;
-	struct m_inode * executable;
-	unsigned long close_on_exec;
-	struct file * filp[NR_OPEN];
+	int tty;		/* -1 if no tty, so it must be signed */ /*进程使用TTY终端的子设备号，-1表示没有使用*/
+	unsigned short umask;			/*文件创建属性屏蔽位*/
+	struct m_inode * pwd;			/*当前工作目录i节点结构指针*/
+	struct m_inode * root;			/*根目录i节点结构指针*/
+	struct m_inode * executable;	/*执行文件i节点结构指针*/
+	unsigned long close_on_exec;	/*执行时关闭文件句柄位图标志（include/fcntl.h)*/
+	struct file * filp[NR_OPEN];	/*文件结构指针表，最多32项，表项号即是文件描述符的值*/
 /* ldt for this task 0 - zero 1 - cs 2 - ds&ss */
-	struct desc_struct ldt[3];
+	struct desc_struct ldt[3];		/*局部描述符表，0=空，1=代码段，2=数据和堆栈段ds&&ss*/
 /* tss for this task */
-	struct tss_struct tss;
+	struct tss_struct tss;			/*进程的任务状态段信息结构*/
 };
 
 /*

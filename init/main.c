@@ -102,7 +102,7 @@ extern long startup_time;       // 内核启动时间（开机时间）（秒）
 // 0x70是写地址端口号，0x80|addr是读取的CMOS内存地址
 // 0x71 是读取数据端口号
 #define CMOS_READ(addr) ({ \
-outb_p(0x80|addr,0x70); \
+outb_p(0x80 | addr, 0x70); \
 inb_p(0x71); \
 })
 
@@ -127,6 +127,7 @@ static void time_init(void)
 		time.tm_mon = CMOS_READ(8);
 		time.tm_year = CMOS_READ(9);
 	} while (time.tm_sec != CMOS_READ(0));
+
 	BCD_TO_BIN(time.tm_sec);
 	BCD_TO_BIN(time.tm_min);
 	BCD_TO_BIN(time.tm_hour);
@@ -141,38 +142,42 @@ static void time_init(void)
 static long memory_end = 0;                     // 机器具有的物理内存容量（字节数）
 static long buffer_memory_end = 0;              // 高速缓冲区末端地址
 static long main_memory_start = 0;              // 主内存（将用于分页）开始的位置
-
 struct drive_info { char dummy[32]; } drive_info;  // 用于存放硬盘参数表信息
 
+
+/*=============================================-main()-==========================================================*/
 // 内核初始化主程序。初始化结束后将以任务0（idle任务即空闲任务）的身份运行。
-void main(void)		/* This really IS void, no error here. */
-{					/* The startup routine assumes (well, ...) this */
+/* This really IS void, no error here. */
+/* The startup routine assumes (well, ...) this */
 /* Interrupts are still disabled. Do necessary setups, then
  * enable them
  */
-    // 下面这段代码用于保存：
-    // 根设备号 ->ROOT_DEV；高速缓存末端地址->buffer_memory_end;
-    // 机器内存数->memory_end；主内存开始地址->main_memory_start；
-    // 其中ROOT_DEV已在前面包含进的fs.h文件中声明为extern int
- 	ROOT_DEV = ORIG_ROOT_DEV;
- 	drive_info = DRIVE_INFO;					// 复制0x90080处的硬盘参数
-	memory_end = (1<<20) + (EXT_MEM_K<<10);     // 内存大小=1Mb + 扩展内存(k)*1024 byte
-	memory_end &= 0xfffff000;                   // 忽略不到4kb(1页)的内存数
-	if (memory_end > 16*1024*1024)              // 内存超过16Mb，则按16Mb计
+void main(void)		
+{					
+    /* 下面这段代码用于保存根设备号(ROOT_DEV)、高速缓存末端地址(buffer_memory_end)、机器内存数(memory_end)
+     * 主内存开始地址(main_memory_start),其中ROOT_DEV已在前面包含进的fs.h文件中声明为extern int
+	 */
+ 	ROOT_DEV = ORIG_ROOT_DEV;				   // 设置OS的根文件
+ 	drive_info = DRIVE_INFO;				   // 复制0x90080处的硬盘参数（驱动参数）
+	memory_end = (1<<20) + (EXT_MEM_K<<10);    // 内存大小 = (系统本身内存)1Mb + 扩展内存大小(k)*1024 byte
+	memory_end &= 0xfffff000;                  // 忽略不足4KB(1页)的内存数，即取整一页为4KB
+	if(memory_end > 16*1024*1024)              // 内存超过16MB，则按16MB计，（设置高速缓冲区大小）
 		memory_end = 16*1024*1024;
-	if (memory_end > 12*1024*1024)              // 如果内存>12Mb,则设置缓冲区末端=4Mb 
+	if(memory_end > 12*1024*1024)              // 如果内存>12MB,则设置缓冲区末端=4MB 
 		buffer_memory_end = 4*1024*1024;
-	else if (memory_end > 6*1024*1024)          // 否则若内存>6Mb,则设置缓冲区末端=2Mb
+	else if(memory_end > 6*1024*1024)          // 否则若内存>6MB,则设置缓冲区末端=2MB
 		buffer_memory_end = 2*1024*1024;
 	else
-		buffer_memory_end = 1*1024*1024;        // 否则设置缓冲区末端=1Mb
-	main_memory_start = buffer_memory_end;
+		buffer_memory_end = 1*1024*1024;       // 否则设置缓冲区末端=1MB
+	main_memory_start = buffer_memory_end;	   // 主存储区紧接着高速缓存区
+
     // 如果在Makefile文件中定义了内存虚拟盘符号RAMDISK,则初始化虚拟盘。此时主内存将减少。
 #ifdef RAMDISK
 	main_memory_start += rd_init(main_memory_start, RAMDISK*1024);
 #endif
+
     /* 以下是内核进行所有方面的初始化工作。阅读时最好跟着调用的程序深入进去看，若实在
-     * 看不下去了，就先放一放，继续看下一个初始化调用。——这是经验之谈。o(∩_∩)o 。;-)
+     * 看不下去了，就先放一放，继续看下一个初始化调用。——这是经验之谈。o(∩_∩)o 。;-) 
 	 */
 	mem_init(main_memory_start,memory_end); // 主内存区初始化。mm/memory.c
 	trap_init();                            // 陷阱门(硬件中断向量)初始化，kernel/traps.c
@@ -181,18 +186,18 @@ void main(void)		/* This really IS void, no error here. */
 	tty_init();                             // tty初始化， kernel/chr_drv/tty_io.c
 	time_init();                            // 设置开机启动时间 startup_time
 	sched_init();                           // 调度程序初始化(加载任务0的tr,ldtr)(kernel/sched.c)
-    // 缓冲管理初始化，建内存链表等。(fs/buffer.c)
-	buffer_init(buffer_memory_end);
+	buffer_init(buffer_memory_end);			// 缓冲管理初始化，建内存链表等。(fs/buffer.c)
 	hd_init();                              // 硬盘初始化，kernel/blk_drv/hd.c
 	floppy_init();                          // 软驱初始化，kernel/blk_drv/floppy.c
-	sti();                                  // 所有初始化工作都做完了，开启中断
+
+	sti();              // 所有初始化工作都做完了，开启中断
     // 下面过程通过在堆栈中设置的参数，利用中断返回指令启动任务0执行。
 	move_to_user_mode();                    // 移到用户模式下执行
 	if (!fork()) {		/* we count on this going ok */
-		init();                             // 在新建的子进程(任务1)中执行。
+		init();         // 在新建的子进程(任务1)中执行。
 	}
 /*
- *   NOTE!!   For any other task 'pause()' would mean we have to get a
+ * NOTE!! For any other task 'pause()' would mean we have to get a
  * signal to awaken, but task0 is the sole exception (see 'schedule()')
  * as task 0 gets activated at every idle moment (when no other tasks
  * can run). For task0 'pause()' just means we go check if some other
@@ -203,6 +208,7 @@ void main(void)		/* This really IS void, no error here. */
 	for(;;) pause();
 }
 
+
 // 下面函数产生格式化信息并输出到标准输出设备stdout(1),这里是指屏幕上显示。参数'*fmt'
 // 指定输出将采用的格式，具体可以看标准C语言书籍。该子程序正好是vsprintf如何使用一个
 // 简单例子。该程序使用vsprintf()将格式化的字符串放入printfbuf缓冲区，然后用write()将
@@ -211,7 +217,6 @@ static int printf(const char *fmt, ...)
 {
 	va_list args;
 	int i;
-
 	va_start(args, fmt);
 	write(1,printbuf,i=vsprintf(printbuf, fmt, args));
 	va_end(args);
@@ -228,13 +233,13 @@ static char * envp_rc[] = { "HOME=/", NULL };       // 调用执行程序时环�
 static char * argv[] = { "-/bin/sh",NULL };
 static char * envp[] = { "HOME=/usr/root", NULL };
 
+
 // 在main()中已经进行了系统初始化，包括内存管理、各种硬件设备和驱动程序。init()函数
 // 运行在任务0第1次创建的子进程(任务1)中。它首先对第一个将要执行的程序(shell)的环境
 // 进行初始化，然后以登录shell方式加载该程序并执行。
 void init(void)
 {
-	int pid,i;
-
+	int pid, i;
     // setup()是一个系统调用。用于读取硬盘参数包括分区表信息并加载虚拟盘(若存在的话)
     // 和安装根文件系统设备。该函数用25行上的宏定义，对应函数是sys_setup()，在块设备
     // 子目录kernel/blk_drv/hd.c中。
@@ -247,11 +252,13 @@ void init(void)
 	(void) open("/dev/tty0",O_RDWR,0);
 	(void) dup(0);                      // 复制句柄，产生句柄1号——stdout标准输出设备
 	(void) dup(0);                      // 复制句柄，产生句柄2号——stderr标准出错输出设备
-    // 打印缓冲区块数和总字节数，每块1024字节，以及主内存区空闲内存字节数
+    
+	// 打印缓冲区块数和总字节数，每块1024字节，以及主内存区空闲内存字节数
 	printf("%d buffers = %d bytes buffer space\n\r",NR_BUFFERS,
 		NR_BUFFERS*BLOCK_SIZE);
 	printf("Free mem: %d bytes\n\r",memory_end-main_memory_start);
-    // 下面fork()用于创建一个子进程(任务2)。对于被创建的子进程，fork()将返回0值，对于
+    
+	// 下面fork()用于创建一个子进程(任务2)。对于被创建的子进程，fork()将返回0值，对于
     // 原进程(父进程)则返回子进程的进程号pid。该子进程关闭了句柄0(stdin)、以只读方式打开
     // /etc/rc文件，并使用execve()函数将进程自身替换成/bin/sh程序(即shell程序)，然后
     // 执行/bin/sh程序。然后执行/bin/sh程序。所携带的参数和环境变量分别由argv_rc和envp_rc
@@ -266,7 +273,8 @@ void init(void)
 		execve("/bin/sh",argv_rc,envp_rc);  // 替换成/bin/sh程序并执行
 		_exit(2);                           // 若execve()执行失败则退出。
 	}
-    // 下面还是父进程(1)执行语句。wait()等待子进程停止或终止，返回值应是子进程的进程号(pid).
+    
+	// 下面还是父进程(1)执行语句。wait()等待子进程停止或终止，返回值应是子进程的进程号(pid).
     // 这三句的作用是父进程等待子进程的结束。&i是存放返回状态信息的位置。如果wait()返回值
     // 不等于子进程号，则继续等待。
 	if (pid>0)
@@ -282,8 +290,8 @@ void init(void)
     // 此外，wait()的另外一个功能是处理孤儿进程。如果一个进程的父进程先终止了，那么
     // 这个进程的父进程就会被设置为这里的init进程(进程1)，并由init进程负责释放一个
     // 已终止进程的任务数据结构等资源。
-	while (1) {
-		if ((pid=fork())<0) {
+	while (1){
+		if ((pid=fork())<0){
 			printf("Fork failed in init\r\n");
 			continue;
 		}

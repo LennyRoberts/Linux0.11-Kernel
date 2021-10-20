@@ -682,7 +682,7 @@ void do_no_page(unsigned long error_code,unsigned long address)
 // 物理内存管理初始化
 // 该函数对1MB以上的内存区域以页面为单位进行管理前的初始化设置工作。一个页面长度
 // 为4KB bytes.该函数把1MB以上所有物理内存划分成一个个页面，并使用一个页面映射字节
-// 数组mem_map[]来管理所有这些页面。对于具有16MB内存容量的机器，该数组共有3840
+// 数组 mem_map[] 来管理所有这些页面。对于具有16MB内存容量的机器，该数组共有3840
 // 项((16MB-1MB)/4KB)，即可管理3840个物理页面。每当一个物理内存页面被占用时就把
 // mem_map[]中对应的字节值增1；若释放一个物理页面，就把对应字节值减1。若字节值为0，
 // 则表示对应页面空闲；若字节值大于或等于1，则表示对应页面被占用或被不同程序共享占用。
@@ -700,7 +700,7 @@ void mem_init(long start_mem, long end_mem)
     // 首先将1MB到16MB范围内所有内存页面对应的内存映射字节数组项置为已占用状态，
     // 即各项字节全部设置成USED(100)。PAGING_PAGES被定义为(PAGING_MEMORY>>12)，
     // 即1MB以上所有物理内存分页后的内存页面数(15MB/4KB = 3840).
-	HIGH_MEMORY = end_mem;                  // 设置内存最高端(16MB)
+	HIGH_MEMORY = end_mem;              // 设置内存最高端(16MB)
 	for (i=0 ; i<PAGING_PAGES ; i++)
 		mem_map[i] = USED;
     // 然后计算主内存区起始内存start_mem处页面对应内存映射字节数组中项号i和主内存区页面数。
@@ -709,7 +709,7 @@ void mem_init(long start_mem, long end_mem)
 	i = MAP_NR(start_mem);      // 主内存区其实位置处页面号
 	end_mem -= start_mem;
 	end_mem >>= 12;             // 主内存区中的总页面数
-	while (end_mem-->0)
+	while (end_mem-- > 0)
 		mem_map[i++]=0;         // 主内存区页面对应字节值清零
 }
 

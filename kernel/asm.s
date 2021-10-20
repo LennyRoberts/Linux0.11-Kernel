@@ -37,7 +37,7 @@ no_error_code:                  # 这里是五出错号处理的入口处。
 	push %ds                    # !!16位的段寄存器入栈后也要占用4个字节。
 	push %es
 	push %fs
-	pushl $0		# "error code"  #将数值0作为出错码入栈
+	pushl $0					# "error code"  #将数值0作为出错码入栈
 	lea 44(%esp),%edx           # 取对堆栈中原调用返回地址处堆栈指针位置，并压入堆栈。
 	pushl %edx
 	movl $0x10,%edx             # 初始化段寄存器ds、es和fs，加载内核数据段选择符

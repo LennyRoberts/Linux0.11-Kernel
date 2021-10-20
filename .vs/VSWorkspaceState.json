@@ -2,11 +2,10 @@
   "ExpandedNodes": [
     "",
     "\\boot",
-    "\\fs",
-    "\\include",
     "\\init",
-    "\\mm"
+    "\\kernel",
+    "\\tools"
   ],
-  "SelectedNode": "\\fs\\block_dev.c",
-  "PreviewInSolutionExplorer": false
+  "SelectedNode": "\\init\\main.c",
+  "PreviewInSolutionExplorer": true
 }

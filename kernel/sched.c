@@ -564,7 +564,7 @@ void sched_init(void)
     // 清任务数组和描述符表项(注意 i=1 开始，所以初始任务的描述符还在)。描述符项结构
     // 定义在文件include/linux/head.h中。
 	p = gdt+2+FIRST_TSS_ENTRY;
-	for(i=1;i<NR_TASKS;i++) {
+	for(i=1; i<NR_TASKS; i++) {
 		task[i] = NULL;
 		p->a=p->b=0;
 		p++;
